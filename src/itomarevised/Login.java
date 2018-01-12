@@ -184,6 +184,11 @@ public class Login extends javax.swing.JFrame {
                 passwordMouseClicked(evt);
             }
         });
+        password.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                passwordActionPerformed(evt);
+            }
+        });
 
         jSeparator2.setForeground(new java.awt.Color(0, 0, 0));
         jSeparator2.setFont(new java.awt.Font("Century Gothic", 1, 24)); // NOI18N
@@ -328,6 +333,21 @@ public class Login extends javax.swing.JFrame {
                     "Invalid login", JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_loginActionPerformed
+
+    private void passwordActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_passwordActionPerformed
+        // TODO add your handling code here:
+        String pass = password.getText();
+        String user = username.getText();
+        
+        if(user.contentEquals("admin") && pass.contentEquals("admin")){
+            new Menu().setVisible(true);
+            this.dispose();
+        }
+        else{
+            JOptionPane.showMessageDialog(null, "Username and/or password is incorrect.",
+                    "Invalid login", JOptionPane.ERROR_MESSAGE);
+        }
+    }//GEN-LAST:event_passwordActionPerformed
 
     /**
      * @param args the command line arguments
