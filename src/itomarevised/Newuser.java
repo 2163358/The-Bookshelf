@@ -320,16 +320,175 @@ public class Newuser extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void createButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_createButtonActionPerformed
-        // TODO add your handling code here:
+        Connection con = getConnection();
+        String subquery = null;
+        
+        PreparedStatement psi1;
+        PreparedStatement psi2;
+        
+        String query = "INSERT INTO `borrowers`(`fname`,`lname`,`mname`,`gender`,"
+                + "`email_address`,`contact_no`,`current_address`,`borrower_type`) "
+                + "VALUES ('"+firstname.getText()+"','"+lastname.getText()+"','"+
+                midname.getText()+"','"+gender()+"','"+email.getText()+"','"
+                +contactno.getText()+"','"+address.getText()+"','"+borrowerType()+"')";        
+                
+        try{
+            psi1 = con.prepareStatement(query);
+            psi1.executeUpdate(query, Statement.RETURN_GENERATED_KEYS);
+            
+            int generatedkey = 0;
+            ResultSet rs = psi1.getGeneratedKeys();
+            if(rs.next()){
+                generatedkey = rs.getInt(1);
+            }
+            
+            if(borrowerType() == "student"){
+                subquery = "INSERT INTO student(stud_id,course,year,borrower_id) VALUES('"+Integer.parseInt(idno.getText())+
+                        "', '"+course.getText()+"','"+year.getText()+"','"+generatedkey+"')";
+            }else if(borrowerType() == "instructor"){
+                subquery = "INSERT INTO instructor(inst_id,department,borrower_id) VALUES('"+Integer.parseInt(idno.getText())+
+                        "', '"+dept.getText()+"','"+generatedkey+"')";
+            }else{
+                this.dispose();
+            }
+            
+            psi2 = con.prepareStatement(subquery);
+            psi2.executeUpdate(subquery);
+            
+            JOptionPane.showMessageDialog(null, "User registered successfully\n Borrower ID: "+generatedkey, "Register User", JOptionPane.INFORMATION_MESSAGE);
+            
+        }catch(Exception ex){
+            ex.printStackTrace();
+        }        
+        this.dispose();
     }//GEN-LAST:event_createButtonActionPerformed
 
     private void borrowerComboBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_borrowerComboBoxActionPerformed
-        // TODO add your handling code here:
+        dept.setEditable(true);
+        if(borrowerComboBox.getSelectedItem().toString().equals("Instructor")){
+            dept.setEditable(true);        
+        }else{
+            dept.setEditable(false);
+        }
+        
+        if(borrowerComboBox.getSelectedItem().toString().equals("Student")){
+            course.setEditable(true);
+            year.setEditable(true);
+        }else{
+            course.setEditable(false);
+            year.setEditable(false);
+        }
     }//GEN-LAST:event_borrowerComboBoxActionPerformed
 
     private void idnoKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_idnoKeyReleased
-        // TODO add your handling code here:
+        boolean stud = false;
+        stud = studFound(Integer.parseInt(idno.getText()), stud);
+        boolean inst = false;
+        inst = instructorFound(Integer.parseInt(idno.getText()), inst);
+        
+        if(stud == true || inst == true){
+            JOptionPane.showMessageDialog(null, "ID Number already exists.", "Error", JOptionPane.ERROR_MESSAGE);
+            idno.setText(null);
+       }
     }//GEN-LAST:event_idnoKeyReleased
+    
+    public boolean studFound(int search, boolean found){        
+        ArrayList<Student> list = new ArrayList<Student>();
+        Connection connection = getConnection();
+        
+        Statement stmnt;
+        ResultSet result;
+        
+        String query = "SELECT * FROM student";
+        
+        try{
+            stmnt = connection.createStatement();
+            result = stmnt.executeQuery(query);
+            Student s;
+            while(result.next()){
+                s = new Student(result.getInt("stud_id"),
+                        result.getString("course"),result.getInt("year"),
+                        result.getInt("borrower_id"));
+                list.add(s);
+            }
+            for(int i = 0; i < list.size(); i++){
+                if(list.get(i).getStudid() == search){
+                    found =  true;           
+                } 
+            }
+            
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        
+        return found;        
+    }
+    
+    public boolean instructorFound(int search, boolean found){        
+        ArrayList<Instructor> list = new ArrayList<Instructor>();
+        Connection connection = getConnection();
+        
+        Statement stmnt;
+        ResultSet result;
+        
+        String query = "SELECT * FROM instructor";
+        
+        try{
+            stmnt = connection.createStatement();
+            result = stmnt.executeQuery(query);
+            Instructor x;
+            while(result.next()){
+                x = new Instructor(result.getInt("inst_id"),
+                        result.getString("department"),result.getInt("borrower_id"));
+                list.add(x);
+            }
+            for(int i = 0; i < list.size(); i++){
+                if(list.get(i).getInst_id() == search){
+                    found =  true;           
+                } 
+            }
+            
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        
+        return found;        
+    }
+    
+    public String borrowerType() {
+        String type = null;
+        if(borrowerComboBox.getSelectedItem().toString() == "Instructor"){
+            type = "instructor";
+        }else if(borrowerComboBox.getSelectedItem().toString() == "Student"){
+            type = "student";
+        }else{
+            type = "undefined";
+        }
+        return type;
+    }
+    
+    public String gender() {
+        String gender = null;
+        if(genderComboBox.getSelectedItem().toString() == "Female"){
+            gender = "F";
+        }else if(genderComboBox.getSelectedItem().toString() == "Male"){
+            gender = "M";
+        }else{
+            gender = "undefined";
+        }
+        return gender;
+    }
+    
+    public Connection getConnection(){
+        Connection connection;
+        try{
+            connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/itoma?user=root&password=");
+            return connection;
+        }catch(Exception ex){
+            ex.printStackTrace();
+            return null;
+        }
+    }
     
     /**
      * @param args the command line arguments
