@@ -289,7 +289,10 @@ public class Regusers extends javax.swing.JFrame {
     }//GEN-LAST:event_searchbarMouseClicked
 
     private void clearButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_clearButtonActionPerformed
-        // TODO add your handling code here:        
+        DefaultTableModel table = (DefaultTableModel)borrowersTable.getModel();
+        table.setRowCount(0);
+        showBorrowersList("SELECT * FROM `borrowers`");
+        searchbar.setText(null);        
     }//GEN-LAST:event_clearButtonActionPerformed
 
     private void regnewuserActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_regnewuserActionPerformed
@@ -297,12 +300,128 @@ public class Regusers extends javax.swing.JFrame {
     }//GEN-LAST:event_regnewuserActionPerformed
 
     private void searchbarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_searchbarActionPerformed
-        // TODO add your handling code here:
+        DefaultTableModel table = (DefaultTableModel)borrowersTable.getModel();
+        table.setRowCount(0);
+        String query;        
+        query = "SELECT * FROM `borrowers` WHERE fname = '"+searchbar.getText()+"' OR "
+                + "lname = '"+searchbar.getText()+"' OR mname = '"+searchbar.getText()+"'"
+                + "OR borrower_id = '"+searchbar.getText()+"'";                    
+        boolean result = false;
+        result = isFound(searchbar.getText(),result, query);
+        if(result == false){
+            JOptionPane.showMessageDialog(null, "User Not Found", "Error", JOptionPane.ERROR_MESSAGE);
+            showBorrowersList("SELECT * FROM `borrowers`");
+            searchbar.setText(null);
+        }else{            
+            showBorrowersList(query);
+        }
     }//GEN-LAST:event_searchbarActionPerformed
 
     private void goButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_goButtonActionPerformed
-        // TODO add your handling code here:
+        DefaultTableModel table = (DefaultTableModel)borrowersTable.getModel();
+        table.setRowCount(0);
+        String query;        
+        query = "SELECT * FROM `borrowers` WHERE fname = '"+searchbar.getText()+"' "
+                + "OR lname = '"+searchbar.getText()+"' OR mname = '"+searchbar.getText()+"' "
+                + "OR borrower_id = '"+searchbar.getText()+"'";          
+        boolean result = false;
+        result = isFound(searchbar.getText(),result, query);
+        if(result == false){
+            JOptionPane.showMessageDialog(null, "User Not Found", "Error", JOptionPane.ERROR_MESSAGE);
+            showBorrowersList("SELECT * FROM `borrowers`");
+            searchbar.setText(null);
+        }else{            
+            showBorrowersList(query);
+        }
     }//GEN-LAST:event_goButtonActionPerformed
+    
+    public Connection getConnection(){
+        Connection connection;
+        try{
+            connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/itoma?user=root&password=");
+            return connection;
+        }catch(Exception ex){
+            ex.printStackTrace();
+            return null;
+        }
+    }
+        
+    public ArrayList<Borrower> showBorrowersList(String query){
+        ArrayList<Borrower> list = new ArrayList<Borrower>();
+        Connection connection = getConnection();
+        
+        Statement stmnt;
+        ResultSet result;
+        
+        try{
+            stmnt = connection.createStatement();
+            result = stmnt.executeQuery(query);
+            Borrower b;
+            while(result.next()){
+                b = new Borrower(result.getInt("borrower_id"),
+                        result.getString("fname"),result.getString("lname"),
+                        result.getString("mname"),result.getString("gender").charAt(0),
+                        result.getString("email_address"),result.getString("contact_no"), 
+                        result.getString("current_address"),result.getString("borrower_type"));
+                list.add(b);
+            }
+            
+            DefaultTableModel table = (DefaultTableModel)borrowersTable.getModel();
+            table.setRowCount(0);
+            Object[] row = new Object[7];
+            for(int x = 0; x < list.size(); x++){
+                row[0] = list.get(x).getBorrower_id();
+                row[1] = list.get(x).getLname();
+                row[2] = list.get(x).getFname();
+                row[3] = list.get(x).getMname();
+                row[4] = list.get(x).getEmail_address();
+                row[5] = list.get(x).getContact_no();
+                row[6] = list.get(x).getBorrower_type();
+
+                table.addRow(row);
+            }
+        
+        }catch(Exception e){
+            e.printStackTrace();
+            
+        }
+        
+        return list;
+    }
+    public boolean isFound(String search, boolean found, String query){        
+        ArrayList<Borrower> list = new ArrayList<Borrower>();
+        Connection connection = getConnection();
+        
+        Statement stmnt;
+        ResultSet result;
+        
+        try{
+            stmnt = connection.createStatement();
+            result = stmnt.executeQuery(query);
+            Borrower b;
+            while(result.next()){
+                b = new Borrower(result.getInt("borrower_id"),
+                        result.getString("fname"),result.getString("lname"),
+                        result.getString("mname"),result.getString("gender").charAt(0),
+                        result.getString("email_address"),result.getString("contact_no"), 
+                        result.getString("current_address"),result.getString("borrower_type"));
+                list.add(b);
+            }
+            for(int i = 0; i < list.size(); i++){
+                if(list.get(i).getFname().equalsIgnoreCase(search) 
+                        || list.get(i).getMname().equalsIgnoreCase(search) 
+                        || list.get(i).getLname().equalsIgnoreCase(search) 
+                        || list.get(i).getBorrower_id() == Integer.parseInt(search)){
+                    found =  true;           
+                } 
+            }
+            
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        
+        return found;        
+    }
     
     /**
      * @param args the command line arguments
