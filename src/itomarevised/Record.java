@@ -266,6 +266,57 @@ public class Record extends javax.swing.JFrame {
         // TODO add your handling code here:
     }//GEN-LAST:event_searchbarActionPerformed
     
+    public Connection getConnection(){
+        Connection connection;
+        try{
+            connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/itoma?user=root&password=");
+            return connection;
+        }catch(Exception ex){
+            ex.printStackTrace();
+            return null;
+        }
+    }  
+    
+    public ArrayList<BookBorrower> showBorrowersList(String query){
+        ArrayList<BookBorrower> list = new ArrayList<BookBorrower>();
+        Connection connection = getConnection();
+        
+        Statement stmnt;
+        ResultSet result;
+        
+        try{
+            stmnt = connection.createStatement();
+            result = stmnt.executeQuery(query);
+            BookBorrower b;
+            while(result.next()){
+                b = new BookBorrower(result.getInt("book_id"),
+                        result.getString("isbn"),result.getString("title"),
+                        result.getInt("borrower_id"),result.getString("borrower"),
+                        result.getString("dateBorrowed"),result.getString("dueDate"));
+                list.add(b);
+            }
+            
+            DefaultTableModel table = (DefaultTableModel)recordsTable.getModel();
+            Object[] row = new Object[7];
+            for(int x = 0; x < list.size(); x++){
+                row[0] = list.get(x).getBookID();
+                row[1] = list.get(x).getIsbn();
+                row[2] = list.get(x).getTitle();
+                row[3] = list.get(x).getBorrowerID();
+                row[4] = list.get(x).getBorrowername();
+                row[5] = list.get(x).getBorrowed_date();
+                row[6] = list.get(x).getDuedate();
+
+                table.addRow(row);
+            }
+        
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        
+        return list;
+    }
+    
     /**
      * @param args the command line arguments
      */
