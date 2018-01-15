@@ -25,6 +25,7 @@ public class Books extends javax.swing.JFrame {
     public Books() {
         initComponents();
         setIcon();
+        showBooks();
         
         Toolkit tool = Toolkit.getDefaultToolkit();
         int width = (int)tool.getScreenSize().getWidth();
@@ -266,9 +267,89 @@ public class Books extends javax.swing.JFrame {
     }//GEN-LAST:event_returnbookActionPerformed
 
     private void goActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_goActionPerformed
-        // TODO add your handling code here:        
+        // TODO add your handling code here:
+        DefaultTableModel dtm = (DefaultTableModel)jTable1.getModel();
+        dtm.setRowCount(0);
+        
+        showBooks();
     }//GEN-LAST:event_goActionPerformed
     
+    public Connection getConnection(){
+        Connection con;
+        try{
+            String conStr = "jdbc:mysql://localhost:3306/itoma?user=root&password=";
+            con = DriverManager.getConnection(conStr);
+            System.out.println("Connection done");
+            return con;
+        }
+        catch(Exception x){
+            System.out.println("Error. Cannot connect.");
+            return null;
+        }
+    }
+    
+    public ArrayList<Book> getBook(){
+        ArrayList<Book> list = new ArrayList<>();
+        Connection con = getConnection();
+        
+        String choice = jComboBox1.getSelectedItem().toString();
+        System.out.println("Category: " + choice);
+        String query;
+        
+        if("All Books".equals(choice)){
+            query = "SELECT book_id, isbn, title, description, publication_year, status, "
+                + "category, CONCAT(last_name, ', ' ,first_name, ' ' ,middle_name) AS Author, "
+                + "publisher FROM books NATURAL JOIN author NATURAL JOIN publishers";
+        }
+        
+        else {
+            query = "SELECT book_id, isbn, title, description, publication_year, status, "
+                + "category, CONCAT(last_name, ', ' ,first_name, ' ' ,middle_name) AS Author, "
+                + "publisher FROM books NATURAL JOIN author NATURAL JOIN publishers "
+                    + "WHERE category = '"+choice+"' ";
+        }
+        
+        Statement st;
+        ResultSet rs;
+        
+        try{
+            st = con.createStatement();
+            rs = st.executeQuery(query);
+            Book book;
+            
+            while(rs.next()){
+                book = new Book(rs.getInt("book_id"), rs.getString("isbn"), 
+                        rs.getString("title"), rs.getString("description"), rs.getInt("publication_year"), rs.getString("status"), 
+                        rs.getString("category"), rs.getString("author"), rs.getString("publisher"));
+                
+                list.add(book);
+            }
+            System.out.println("Retrieval done.");
+        }
+        catch(Exception x){
+            System.out.println("Error. Cannot retrieve data.");
+        }
+        return list;
+    }
+    
+    public void showBooks(){
+        ArrayList<Book> list = getBook();
+        DefaultTableModel dtm = (DefaultTableModel)jTable1.getModel();
+        
+        Object[] row = new Object[8];
+        for (int i = 0; i < list.size(); i++) {
+            row[0] = list.get(i).getBook_id();
+            row[1] = list.get(i).getIsbn();
+            row[2] = list.get(i).getTitle();
+            row[3] = list.get(i).getPublication_year();
+            row[4] = list.get(i).getStatus();
+            row[5] = list.get(i).getCategory();
+            row[6] = list.get(i).getAuthor();
+            row[7] = list.get(i).getPublisher();
+            
+            dtm.addRow(row);
+        }
+    }
     /**
      * @param args the command line arguments
      */
@@ -294,6 +375,7 @@ public class Books extends javax.swing.JFrame {
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
             java.util.logging.Logger.getLogger(Books.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
+        //</editor-fold>
         //</editor-fold>
 
         /* Create and display the form */
