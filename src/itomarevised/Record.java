@@ -26,6 +26,9 @@ public class Record extends javax.swing.JFrame {
     public Record() {
         initComponents();
         setIcon();
+        showBorrowersList("SELECT book_id, isbn, title, borrower_id, CONCAT (fname, ' ', mname, ' ', lname) AS borrower, "
+                + "dateBorrowed, dueDate FROM books NATURAL JOIN rental NATURAL JOIN borrowers "
+                + "WHERE status = 'unavailable'");
         
         Toolkit tool = Toolkit.getDefaultToolkit();
         int width = (int)tool.getScreenSize().getWidth();
@@ -255,15 +258,70 @@ public class Record extends javax.swing.JFrame {
     }//GEN-LAST:event_backMouseClicked
 
     private void goButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_goButtonActionPerformed
-        // TODO add your handling code here:
+        DefaultTableModel table = (DefaultTableModel)recordsTable.getModel();
+        table.setRowCount(0);
+        String query;        
+        query = "SELECT book_id, isbn, title, borrower_id, CONCAT (fname, ' ', mname, ' ', lname) AS borrower, "
+                + "dateBorrowed, dueDate FROM books NATURAL JOIN rental NATURAL JOIN borrowers "
+                + "WHERE status = 'unavailable' AND (book_id = '"+searchbar.getText()+"' "
+                + "OR isbn = '"+searchbar.getText()+"' OR borrower_id = '"+searchbar.getText()+"')";      
+        
+        boolean result = false;
+        result = isFound(searchbar.getText(),result, query);
+        if(result == false){ 
+            showBorrowersList("SELECT book_id, isbn, title, borrower_id, CONCAT (fname, ' ', mname, ' ', lname) AS borrower,"
+                    + "dateBorrowed, dueDate FROM books NATURAL JOIN rental NATURAL JOIN borrowers "
+                    + "WHERE status = 'unavailable' AND (title LIKE '%"+searchbar.getText()+"%' OR CONCAT (fname, ' ', mname, ' ', lname) LIKE '%"+searchbar.getText()+"%')");
+        }else{            
+            showBorrowersList(query);
+        }
+        
+        int rows = recordsTable.getRowCount();        
+        if(rows == 0){
+            JOptionPane.showMessageDialog(null, "Search item not found", "Error", JOptionPane.ERROR_MESSAGE);
+            showBorrowersList("SELECT book_id, isbn, title, borrower_id, CONCAT (fname, ' ', mname, ' ', lname) AS borrower,"
+                    + "dateBorrowed, dueDate FROM books NATURAL JOIN rental NATURAL JOIN borrowers "
+                    + "WHERE status = 'unavailable'");
+            searchbar.setText(null);
+        }
     }//GEN-LAST:event_goButtonActionPerformed
 
     private void clearButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_clearButtonActionPerformed
-        // TODO add your handling code here:
+        DefaultTableModel table = (DefaultTableModel)recordsTable.getModel();
+        table.setRowCount(0);
+        showBorrowersList("SELECT book_id, isbn, title, borrower_id, CONCAT (fname, ' ', mname, ' ', lname) AS borrower,"
+                + "dateBorrowed, dueDate FROM books NATURAL JOIN rental NATURAL JOIN borrowers "
+                + "WHERE status = 'unavailable'");
+        searchbar.setText(null);
     }//GEN-LAST:event_clearButtonActionPerformed
 
     private void searchbarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_searchbarActionPerformed
-        // TODO add your handling code here:
+        DefaultTableModel table = (DefaultTableModel)recordsTable.getModel();
+        table.setRowCount(0);
+        String query;        
+        query = "SELECT book_id, isbn, title, borrower_id, CONCAT (fname, ' ', mname, ' ', lname) AS borrower, "
+                + "dateBorrowed, dueDate FROM books NATURAL JOIN rental NATURAL JOIN borrowers "
+                + "WHERE status = 'unavailable' AND (book_id = '"+searchbar.getText()+"' "
+                + "OR isbn = '"+searchbar.getText()+"' OR borrower_id = '"+searchbar.getText()+"')";
+        
+        boolean result = false;
+        result = isFound(searchbar.getText(),result, query);
+        if(result == false){ 
+            showBorrowersList("SELECT book_id, isbn, title, borrower_id, CONCAT (fname, ' ', mname, ' ', lname) AS borrower,"
+                    + "dateBorrowed, dueDate FROM books NATURAL JOIN rental NATURAL JOIN borrowers "
+                    + "WHERE status = 'unavailable' AND (title LIKE '%"+searchbar.getText()+"%' OR CONCAT (fname, ' ', mname, ' ', lname) LIKE '%"+searchbar.getText()+"%')");
+        }else{            
+            showBorrowersList(query);
+        }
+        
+        int rows = recordsTable.getRowCount();        
+        if(rows == 0){
+            JOptionPane.showMessageDialog(null, "Search item not found", "Error", JOptionPane.ERROR_MESSAGE);
+            showBorrowersList("SELECT book_id, isbn, title, borrower_id, CONCAT (fname, ' ', mname, ' ', lname) AS borrower,"
+                    + "dateBorrowed, dueDate FROM books NATURAL JOIN rental NATURAL JOIN borrowers "
+                    + "WHERE status = 'unavailable'");
+            searchbar.setText(null);
+        }
     }//GEN-LAST:event_searchbarActionPerformed
     
     public Connection getConnection(){
@@ -315,6 +373,39 @@ public class Record extends javax.swing.JFrame {
         }
         
         return list;
+    }
+    
+    public boolean isFound(String search, boolean found, String query){        
+        ArrayList<BookBorrower> list = new ArrayList<BookBorrower>();
+        Connection connection = getConnection();
+        
+        Statement stmnt;
+        ResultSet result;
+        
+        try{
+            stmnt = connection.createStatement();
+            result = stmnt.executeQuery(query);
+            BookBorrower b;
+            while(result.next()){
+                b = new BookBorrower(result.getInt("book_id"),
+                        result.getString("isbn"),result.getString("title"),
+                        result.getInt("borrower_id"),result.getString("borrower"),
+                        result.getString("dateBorrowed"),result.getString("dueDate"));
+                list.add(b);
+            }
+            for(int i = 0; i < list.size(); i++){                
+                if(list.get(i).getIsbn().equalsIgnoreCase(search) 
+                        || list.get(i).getBookID() == Integer.parseInt(search) 
+                        || list.get(i).getBorrowerID() == Integer.parseInt(search)){
+                    found = true;
+                }
+            }
+            
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        
+        return found;        
     }
     
     /**
