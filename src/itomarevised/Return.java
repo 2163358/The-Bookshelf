@@ -15,7 +15,6 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import javax.swing.ImageIcon;
 import javax.swing.JOptionPane;
 
 /**
@@ -140,7 +139,228 @@ public class Return extends javax.swing.JFrame {
 
     private void doneActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_doneActionPerformed
         // TODO add your handling code here:
+        int borrower = Integer.parseInt(borid.getText());
+        int book = Integer.parseInt(bookid.getText());
+        
+        boolean borrowerFound;
+        boolean found;
+        boolean avail;
+        
+        borrowerFound = borrowerIsFound(borrower);
+        found = isFound(book);
+        avail = isAvailable(book);
+        
+        if(borrowerFound == false){
+            JOptionPane.showMessageDialog(new Return(), "Invalid borrower id", "Return Book",
+                    JOptionPane.ERROR_MESSAGE);
+            borid.setText(null);
+            bookid.setText(null);
+        }
+        else if(found == false){
+            JOptionPane.showMessageDialog(new Return(), "Book not found", "Return Book",
+                    JOptionPane.ERROR_MESSAGE);
+            borid.setText(null);
+            bookid.setText(null);
+        }
+        else if(avail == false){
+            JOptionPane.showMessageDialog(new Return(), "Book is available", "Return Book",
+                    JOptionPane.ERROR_MESSAGE);
+            borid.setText(null);
+            bookid.setText(null);
+        }
+        else{
+            getRental();
+            JOptionPane.showMessageDialog(new Return(), "Book returned successfully",
+                    "Return Book", JOptionPane.INFORMATION_MESSAGE);
+            compareDate();
+            this.dispose();
+        }        
     }//GEN-LAST:event_doneActionPerformed
+
+    public Connection getConnection(){
+        Connection con;
+        try{
+            String conStr = "jdbc:mysql://localhost:3306/itoma?user=root&password=";
+            con = DriverManager.getConnection(conStr);
+            System.out.println("Connection done");
+            return con;
+        }
+        catch(Exception x){
+            x.printStackTrace();
+            return null;
+        }
+    }
+    
+    public String getRental(){
+        ArrayList<Rental> list = new ArrayList<>();
+        Connection con = getConnection();
+        String dueDate = "";
+        String dateReturned = getDate();
+        //String dateReturned = "02/14/18";
+        
+        String query = "SELECT * FROM rental";
+        
+        //String status = "SELECT status FROM books";
+        Statement st;
+        ResultSet rs;
+        PreparedStatement rent;
+        PreparedStatement books;
+        
+        try{
+            st = con.createStatement();
+            rs = st.executeQuery(query);
+            Rental rental;
+            
+            while(rs.next()){
+                rental = new Rental(rs.getInt("borrower_id"), rs.getInt("book_id"), 
+                        rs.getString("dateBorrowed"), rs.getString("dueDate"), 
+                        rs.getString("dateReturned"), rs.getInt("overdue_fee")); 
+       
+                list.add(rental);
+            }
+            for (int i = 0; i < list.size(); i++) {
+                if(list.get(i).getBook_id() == Integer.parseInt(bookid.getText())){
+                    dueDate = list.get(i).getDueDate();
+                }
+            }
+            
+            rent = con.prepareStatement("UPDATE rental SET overdue_fee = '"
+                    +compOverdue(dueDate,dateReturned)+"', dateReturned = '"+getDate()+"' "
+                    + "WHERE book_id = '"+Integer.parseInt(bookid.getText())+"' ");
+            rent.executeUpdate();
+            
+            System.out.println("Rental update complete");
+            
+            books = con.prepareStatement("UPDATE books SET status = 'available' "
+                    + "WHERE book_id = '"+Integer.parseInt(bookid.getText())+"' ");
+            books.executeUpdate();
+            
+            System.out.println("Books update complete");
+            
+            System.out.println("Retrieval done");
+        }
+        catch(Exception x){
+            System.out.println("getRental error");
+        }
+        
+        return dueDate;
+    }
+    
+    public boolean isFound(int book_id){
+        boolean result = false;
+        ArrayList<Book> bookList = new ArrayList<>();
+        Connection con = getConnection();
+
+        String query = "SELECT book_id, isbn, title, description, publication_year, status, "
+                + "category, CONCAT(last_name, ', ' ,first_name, ' ' ,middle_name) AS author, "
+                + "publisher FROM books NATURAL JOIN author NATURAL JOIN publishers";
+        
+        
+        //String status = "SELECT status FROM books";
+        Statement st;
+        ResultSet rs;
+        
+        try{
+            st = con.createStatement();
+            rs = st.executeQuery(query);
+            Book book;
+
+            while(rs.next()){
+                book = new Book(rs.getInt("book_id"), rs.getString("isbn"), 
+                        rs.getString("title"), rs.getString("description"), rs.getInt("publication_year"), rs.getString("status"), 
+                        rs.getString("category"), rs.getString("author"), rs.getString("publisher"));
+       
+                bookList.add(book);
+            }
+            for (int i = 0; i < bookList.size(); i++) {
+                if(bookList.get(i).getBook_id() == book_id){
+                    result = true;                             
+                }
+            }
+            
+            System.out.println("Retrieval done.");
+        }
+        catch(Exception x){
+            x.printStackTrace();
+        }
+        return result;
+    }
+    
+    public boolean borrowerIsFound(int borrower_id){
+        boolean result = false;
+        ArrayList<Borrower> borrowerList = new ArrayList<>();
+        Connection con = getConnection();
+        
+        String query2 = "SELECT * FROM borrowers";
+        Statement st2;
+        ResultSet rs2;
+        
+        try{
+            st2 = con.createStatement();
+            rs2 = st2.executeQuery(query2);
+            Borrower borrower;
+            
+            while(rs2.next()){
+                borrower = new Borrower(rs2.getInt("borrower_id"), rs2.getString("fname"),
+                        rs2.getString("lname"), rs2.getString("mname"), rs2.getString("gender").charAt(0),
+                        rs2.getString("email_address"), rs2.getString("contact_no"), 
+                        rs2.getString("current_address"), rs2.getString("borrower_type"));
+                borrowerList.add(borrower);
+            }   
+            
+            for (int i = 0; i < borrowerList.size(); i++) {
+                if(borrowerList.get(i).getBorrower_id() == borrower_id)
+                    result = true;
+            }
+            
+            System.out.println("Borrower retrieval done.");
+        }
+        catch(Exception x){
+            System.out.println("Error in borrower isFound");
+        }
+        
+        return result;
+    }
+    
+    public boolean isAvailable(int book_id){
+        boolean result = false;
+        ArrayList<Book> bookList = new ArrayList<>();
+        Connection con = getConnection();
+
+        String query = "SELECT book_id, isbn, title, description, publication_year, status, "
+                + "category, CONCAT(last_name, ', ' ,first_name, ' ' ,middle_name) AS author, "
+                + "publisher FROM books NATURAL JOIN author NATURAL JOIN publishers";
+        
+        //String status = "SELECT status FROM books";
+        Statement st;
+        ResultSet rs;
+        
+        try{
+            st = con.createStatement();
+            rs = st.executeQuery(query);
+            Book book;
+            while(rs.next()){
+                book = new Book(rs.getInt("book_id"), rs.getString("isbn"), 
+                        rs.getString("title"), rs.getString("description"), rs.getInt("publication_year"), rs.getString("status"), 
+                        rs.getString("category"), rs.getString("author"), rs.getString("publisher"));
+       
+                bookList.add(book);
+            }
+            for (int i = 0; i < bookList.size(); i++) {
+                if(bookList.get(i).getBook_id() == book_id){
+                    int x = i;
+                    if(bookList.get(x).getStatus().equals("unavailable")){
+                        result = true;
+                    }         
+                }
+            }
+            System.out.println("Retrieval done.");
+        }
+        catch(Exception x){
+            x.printStackTrace();
+        }
+        return result;
+    }
     
     /**
      * @param args the command line arguments
@@ -169,6 +389,8 @@ public class Return extends javax.swing.JFrame {
         }
         //</editor-fold>
         //</editor-fold>
+        //</editor-fold>
+        //</editor-fold>
 
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
@@ -192,5 +414,84 @@ public class Return extends javax.swing.JFrame {
     private void setIcon() {
         setIconImage(Toolkit.getDefaultToolkit().getImage(getClass().
                 getResource("/icons/frameicon2.png")));
-    }    
+    }
+    
+    private String getDate(){
+        DateFormat df = new SimpleDateFormat("MM/dd/yy");
+        Date dateobj = new Date();
+        String date = df.format(dateobj);
+        System.out.println("Date today: " + date);
+        
+        return date;
+    }
+    
+    private int compOverdue(String dueDate, String dateReturned){
+        int overdue = 0;
+        int temp1 = 0;
+        int temp2 = 0;
+        int temp3 = 0;
+        int ctr = 0;
+        
+        String[] db = dueDate.split("/");
+        int monthDue = Integer.parseInt(db[0]);
+        int dayDue = Integer.parseInt(db[1]);
+        int yearDue = Integer.parseInt(db[2]);
+        
+        String[] dr = dateReturned.split("/");
+        int monthRet = Integer.parseInt(dr[0]);
+        int dayRet = Integer.parseInt(dr[1]);
+        int yearRet = Integer.parseInt(dr[2]);
+        
+        if(dayRet > dayDue && monthDue == monthRet){
+            temp1 = dayRet - dayDue;
+            overdue = temp1 * 25;
+        }
+        else if(dayRet <= dayDue && monthDue != monthRet){
+            temp1 = dayDue - dayRet;
+            temp2 = temp1 * 25;
+            while(monthRet > monthDue){
+                monthDue++;
+                ctr++;
+                temp3 = ctr * 750;
+            } 
+            overdue = temp3 - temp2;
+        }
+        else if(dayRet >= dayDue && monthDue != monthRet){
+            temp1 = dayRet - dayDue;
+            temp2 = temp1 * 25;
+            while(monthRet > monthDue){
+                monthDue++;
+                ctr++;
+                temp3 = ctr * 750;
+            } 
+            overdue = temp3 + temp2;
+        }
+        else{
+            overdue = 0;
+        }
+        
+        return overdue;
+    }
+    
+    private void compareDate(){
+        String dueDate = getRental();
+        String dateReturned = getDate();
+        //String dateReturned = "02/14/18";
+        
+        String[] db = dueDate.split("/");
+        int monthDue = Integer.parseInt(db[0]);
+        int dayDue = Integer.parseInt(db[1]);
+        int yearDue = Integer.parseInt(db[2]);
+        
+        String[] dr = dateReturned.split("/");
+        int monthRet = Integer.parseInt(dr[0]);
+        int dayRet = Integer.parseInt(dr[1]);
+        int yearRet = Integer.parseInt(dr[2]);
+        
+        if(monthRet > monthDue || dayRet > dayDue){
+            JOptionPane.showMessageDialog(new Return(), "Book return is overdue,"
+                    + "please pay PHP " + compOverdue(dueDate, dateReturned)+ ". Thank you."
+                    , "Overdue", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
 }
